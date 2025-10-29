@@ -42,14 +42,14 @@ To get started:
 🤖 Checking what I already know about you...
 
 🧠 Here are your current preferences:  
-1. User requests that returned user data include days_since_signup and date_of_last_question  
+1. User requests that returned charts are blue in color
 
 Would you like to add any new preferences? (press Enter to skip)  
-➡️  Your new preference: include organization name  
-💾 Saved: "include organization name"
+➡️  Your new preference: i prefer line charts to bar charts where applicable
+💾 Saved: "show line charts over bar charts where applicable"
 
 Now, what question would you like to ask?  
-❓ Your question: hosted app usage for adi@vanna.ai  
+❓ Your question: show monthly sales over the last 12 months
 📤 Sent to Vanna API...
 
 ---

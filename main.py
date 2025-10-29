@@ -4,18 +4,21 @@ from dotenv import load_dotenv
 from mem0 import MemoryClient
 
 # ---------------------------------------------------------------------
-# 1️⃣ Load environment variables
+# 1️⃣ Setup
 # ---------------------------------------------------------------------
 load_dotenv()
 
-VANNA_API_KEY = os.getenv("VANNA_API_KEY")
 MEM0_API_KEY = os.getenv("MEM0_API_KEY")
+MEM0_USER_EMAIL = os.getenv("MEM0_USER_EMAIL")
 MEM0_ORG_ID = os.getenv("MEM0_ORG_ID")
 MEM0_PROJECT_ID = os.getenv("MEM0_PROJECT_ID")
 
-# ---------------------------------------------------------------------
-# 2️⃣ Initialize Mem0 client
-# ---------------------------------------------------------------------
+VANNA_API_KEY = os.getenv("VANNA_API_KEY")
+VANNA_USER_EMAIL = os.getenv("VANNA_USER_EMAIL")
+
+if not all([MEM0_API_KEY, MEM0_USER_EMAIL, MEM0_ORG_ID, MEM0_PROJECT_ID, VANNA_API_KEY, VANNA_USER_EMAIL]):
+    raise ValueError("❌ Missing one or more required environment variables in .env file.")
+
 mem0_client = MemoryClient(
     api_key=MEM0_API_KEY,
     org_id=MEM0_ORG_ID,
@@ -23,66 +26,96 @@ mem0_client = MemoryClient(
 )
 
 # ---------------------------------------------------------------------
-# 3️⃣ Helper: Retrieve preferences from Mem0
+# 2️⃣ Helper functions
 # ---------------------------------------------------------------------
-def get_user_memories(user_id: str):
+def get_user_memories():
+    """Fetch and return user preferences from Mem0."""
     try:
-        response = mem0_client.search(
-            query="preferences",
-            filters={"user_id": user_id}
-        )
-        memories = response.get("results", [])
-        if not memories:
-            print("ℹ️  No memories found for this user.")
-            return ""
-        print("\n🧠 Retrieved user preferences from Mem0:")
-        for m in memories:
-            print(f" - {m['memory']}")
-        return "\n".join([m["memory"] for m in memories])
+        memories = mem0_client.search(query="preferences", filters={"user_id": MEM0_USER_EMAIL})
+        results = memories.get("results", [])
+        return [m["memory"] for m in results]
     except Exception as e:
-        print(f"⚠️  Mem0 fetch error: {e}")
-        return ""
+        print(f"⚠️ Error retrieving memories: {e}")
+        return []
 
-# ---------------------------------------------------------------------
-# 4️⃣ Helper: Query Vanna
-# ---------------------------------------------------------------------
-def query_vanna(message: str, user_email: str, mem_context: str):
-    url = "https://app.vanna.ai/api/v2/chat_sse"
+
+def add_new_preference():
+    """Prompt the user to add a new preference."""
+    print("\nWould you like to add any new preferences? (press Enter to skip)")
+    new_pref = input("➡️  Your new preference: ").strip()
+
+    if new_pref:
+        try:
+            messages = [{"role": "user", "content": new_pref}]
+            mem0_client.add(messages, user_id=MEM0_USER_EMAIL, version="v2")
+            print("✅ New preference added to memory!")
+        except Exception as e:
+            print(f"⚠️ Error adding preference: {e}")
+    else:
+        print("👍 No new preferences added.")
+
+
+def query_vanna_with_context(question, memories):
+    """Send question + memory context to Vanna API and display the answer."""
+    context = "\n".join(f"- {m}" for m in memories) if memories else "No stored preferences."
+
+    message = f"""
+The user has the following preferences:
+{context}
+
+Now answer this question based on those preferences:
+{question}
+""".strip()
+
+    print("\n🔍 Querying Vanna API...\n")
+
+    payload = {
+        "message": message,
+        "user_email": VANNA_USER_EMAIL,
+        "acceptable_responses": ["text"]
+    }
+
     headers = {
         "Content-Type": "application/json",
         "VANNA-API-KEY": VANNA_API_KEY
     }
 
-    prompt_with_context = (
-        f"User preferences:\n{mem_context}\n\n"
-        f"User query: {message}"
-    )
+    try:
+        response = requests.post("https://app.vanna.ai/api/v2/chat_sse", headers=headers, json=payload)
+        response.raise_for_status()
+        print("💬 Response from Vanna:\n")
+        print(response.text)
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Error calling Vanna API: {e}")
 
-    payload = {
-        "message": prompt_with_context,
-        "user_email": user_email,
-        "acceptable_responses": ["text", "dataframe"]
-    }
-
-    print("\n📤 Sending query to Vanna...")
-    response = requests.post(url, json=payload, headers=headers, stream=True)
-
-    print("\n💬 Vanna response:")
-    for line in response.iter_lines():
-        if line:
-            print(line.decode("utf-8"))
 
 # ---------------------------------------------------------------------
-# 5️⃣ Main run
+# 3️⃣ Main flow
+# ---------------------------------------------------------------------
+def main():
+    print("🤖 Checking what I already know about you...\n")
+    user_memories = get_user_memories()
+
+    if user_memories:
+        print("🧠 Here are your current preferences:\n")
+        for i, m in enumerate(user_memories, 1):
+            print(f"  {i}. {m}")
+    else:
+        print("No preferences stored yet.")
+
+    add_new_preference()
+
+    print("\nNow, what question would you like to ask?")
+    question = input("❓ Your question: ").strip()
+    if not question:
+        print("No question entered. Exiting.")
+        return
+
+    query_vanna_with_context(question, user_memories)
+
+
+# ---------------------------------------------------------------------
+# 4️⃣ Run
 # ---------------------------------------------------------------------
 if __name__ == "__main__":
-    USER_EMAIL_VANNA = os.getenv("VANNA_USER_EMAIL")
-    USER_EMAIL_MEM0 = os.getenv("MEM0_USER_EMAIL")
-
-    memories_text = get_user_memories(USER_EMAIL_MEM0)
-
-    query_vanna(
-        message="Show total questions in hosted app for adi@vanna.ai",
-        user_email=USER_EMAIL_VANNA,
-        mem_context=memories_text
-    )
+    main()

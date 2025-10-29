@@ -1,3 +1,14 @@
+<p align="center">
+  <a href="https://youtu.be/n9hJMWUGwRw" target="_blank">
+    <img src="https://img.youtube.com/vi/n9hJMWUGwRw/maxresdefault.jpg" 
+         alt="Watch the Mem0 + Vanna AI Demo" 
+         width="720">
+  </a>
+</p>
+<p align="center">
+  <em>🎥 Watch the Mem0 + Vanna AI demo</em>
+</p>
+
 # Mem0 + Vanna AI (User Preference Memory Demo)
 
 A minimal proof-of-concept showing how to integrate **Vanna AI** — a conversational analytics engine — with **Mem0**, a universal memory layer for AI agents, to demonstrate how persistent user memory can personalize data queries.

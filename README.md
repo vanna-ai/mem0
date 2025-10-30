@@ -27,6 +27,8 @@ A minimal proof-of-concept showing how to integrate **Vanna AI** — a conversat
 
 ## 🚀 Setup
 
+Pre-reqs: Vanna connected to your database. Takes 90 secs to do this at app.vanna.ai assuming you're a database admin. 
+
 To get started:
 
 1. Clone the repository  
